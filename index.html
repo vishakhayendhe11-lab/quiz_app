@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI GK Quiz</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <div class="quiz-container">
+        <div class="user-header">
+            <span>👤 Welcome, <b>{{ user }}</b>!</span>
+            <a href="/logout" class="logout-link">Logout</a>
+        </div>
+
+        <h1>🤖 AI General Knowledge Quiz</h1>
+        
+        <div id="timer-box" class="timer" style="display:none;">
+            ⏳ Time Left: <span id="time-left">120</span>s
+        </div>
+
+        <hr>
+
+        <div id="quiz-box">
+            <p class="loading">Loading AI Questions...</p>
+        </div>
+
+        <button id="submit-btn" onclick="checkAnswers()" style="display:none;">Submit Quiz</button>
+        
+        <div id="result-box"></div>
+    </div>
+
+    <script>
+        let quizData = [];
+        let timeLeft = 120; // Set to 120 seconds (2 minutes)
+        let timerInterval;
+
+        // Fetch questions from Backend API
+        fetch('/api/questions')
+            .then(response => response.json())
+            .then(data => {
+                quizData = data;
+                displayQuiz();
+                startTimer();
+            })
+            .catch(error => {
+                document.getElementById('quiz-box').innerHTML = '<p style="color:red;">Failed to load questions!</p>';
+            });
+
+        function displayQuiz() {
+            const quizBox = document.getElementById('quiz-box');
+            let htmlContent = '';
+
+            quizData.forEach((q, index) => {
+                htmlContent += `
+                    <div class="question-block">
+                        <h3>${q.question}</h3>
+                `;
+
+                q.options.forEach(option => {
+                    htmlContent += `
+                        <label class="option-label">
+                            <input type="radio" name="q${index}" value="${option}">
+                            ${option}
+                        </label><br>
+                    `;
+                });
+
+                htmlContent += `</div>`;
+            });
+
+            quizBox.innerHTML = htmlContent;
+            document.getElementById('submit-btn').style.display = 'block';
+            document.getElementById('timer-box').style.display = 'block';
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('time-left').innerText = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    alert("⏰ Time's up! Submitting your quiz automatically.");
+                    checkAnswers();
+                }
+            }, 1000);
+        }
+
+        function checkAnswers() {
+            clearInterval(timerInterval);
+            let score = 0;
+
+            quizData.forEach((q, index) => {
+                const selected = document.querySelector(`input[name="q${index}"]:checked`);
+                if (selected && selected.value === q.answer) {
+                    score++;
+                }
+            });
+
+            document.getElementById('quiz-box').style.display = 'none';
+            document.getElementById('submit-btn').style.display = 'none';
+            document.getElementById('timer-box').style.display = 'none';
+
+            const percentage = (score / quizData.length) * 100;
+            const resultBox = document.getElementById('result-box');
+
+            resultBox.innerHTML = `
+                <h2>🏆 Your Result 🏆</h2>
+                <p>Score: <b>${score} / ${quizData.length}</b></p>
+                <p>Percentage: <b>${percentage.toFixed(2)}%</b></p>
+                <button onclick="location.reload()" class="reload-btn">Try Again 🔄</button>
+            `;
+        }
+    </script>
+</body>
+</html>
