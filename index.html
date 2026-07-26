@@ -3,116 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI GK Quiz</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>AI General Knowledge Quiz</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+        h2 {
+            color: #333;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 <body>
 
-    <div class="quiz-container">
-        <div class="user-header">
-            <span>👤 Welcome, <b>{{ user }}</b>!</span>
-            <a href="/logout" class="logout-link">Logout</a>
-        </div>
-
-        <h1>🤖 AI General Knowledge Quiz</h1>
-        
-        <div id="timer-box" class="timer" style="display:none;">
-            ⏳ Time Left: <span id="time-left">120</span>s
-        </div>
-
+    <div class="container" id="quiz-container">
+        <h2>🤖 AI General Knowledge Quiz</h2>
         <hr>
-
-        <div id="quiz-box">
-            <p class="loading">Loading AI Questions...</p>
+        <div id="question-box">
+            <p id="question-text">Loading question...</p>
+            <div id="options-box"></div>
         </div>
-
-        <button id="submit-btn" onclick="checkAnswers()" style="display:none;">Submit Quiz</button>
-        
-        <div id="result-box"></div>
     </div>
 
     <script>
-        let quizData = [];
-        let timeLeft = 120; // Set to 120 seconds (2 minutes)
-        let timerInterval;
+        const quizData = [
+            {
+                question: "What is the capital of France?",
+                options: ["Berlin", "Madrid", "Paris", "Rome"],
+                answer: "Paris"
+            },
+            {
+                question: "Which planet is known as the Red Planet?",
+                options: ["Earth", "Mars", "Jupiter", "Venus"],
+                answer: "Mars"
+            },
+            {
+                question: "What is the largest mammal on Earth?",
+                options: ["Elephant", "Blue Whale", "Giraffe", "Great White Shark"],
+                answer: "Blue Whale"
+            }
+        ];
 
-        // Fetch questions from Backend API
-        fetch('/api/questions')
-            .then(response => response.json())
-            .then(data => {
-                quizData = data;
-                displayQuiz();
-                startTimer();
-            })
-            .catch(error => {
-                document.getElementById('quiz-box').innerHTML = '<p style="color:red;">Failed to load questions!</p>';
-            });
+        let currentQuestion = 0;
+        let score = 0;
 
-        function displayQuiz() {
-            const quizBox = document.getElementById('quiz-box');
-            let htmlContent = '';
+        function loadQuiz() {
+            const qBox = document.getElementById("question-text");
+            const optBox = document.getElementById("options-box");
+            optBox.innerHTML = "";
 
-            quizData.forEach((q, index) => {
-                htmlContent += `
-                    <div class="question-block">
-                        <h3>${q.question}</h3>
-                `;
-
-                q.options.forEach(option => {
-                    htmlContent += `
-                        <label class="option-label">
-                            <input type="radio" name="q${index}" value="${option}">
-                            ${option}
-                        </label><br>
-                    `;
+            if (currentQuestion < quizData.length) {
+                qBox.innerText = `Q${currentQuestion + 1}: ${quizData[currentQuestion].question}`;
+                quizData[currentQuestion].options.forEach(option => {
+                    const btn = document.createElement("button");
+                    btn.innerText = option;
+                    btn.className = "btn";
+                    btn.onclick = () => selectAnswer(option);
+                    optBox.appendChild(btn);
                 });
-
-                htmlContent += `</div>`;
-            });
-
-            quizBox.innerHTML = htmlContent;
-            document.getElementById('submit-btn').style.display = 'block';
-            document.getElementById('timer-box').style.display = 'block';
+            } else {
+                document.getElementById("quiz-container").innerHTML = `
+                    <h2>Quiz Completed! 🎉</h2>
+                    <p>Your Score: <b>${score} / ${quizData.length}</b></p>
+                    <button class="btn" onclick="location.reload()">Play Again</button>
+                `;
+            }
         }
 
-        function startTimer() {
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                document.getElementById('time-left').innerText = timeLeft;
-
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    alert("⏰ Time's up! Submitting your quiz automatically.");
-                    checkAnswers();
-                }
-            }, 1000);
+        function selectAnswer(selected) {
+            if (selected === quizData[currentQuestion].answer) {
+                score++;
+            }
+            currentQuestion++;
+            loadQuiz();
         }
 
-        function checkAnswers() {
-            clearInterval(timerInterval);
-            let score = 0;
-
-            quizData.forEach((q, index) => {
-                const selected = document.querySelector(`input[name="q${index}"]:checked`);
-                if (selected && selected.value === q.answer) {
-                    score++;
-                }
-            });
-
-            document.getElementById('quiz-box').style.display = 'none';
-            document.getElementById('submit-btn').style.display = 'none';
-            document.getElementById('timer-box').style.display = 'none';
-
-            const percentage = (score / quizData.length) * 100;
-            const resultBox = document.getElementById('result-box');
-
-            resultBox.innerHTML = `
-                <h2>🏆 Your Result 🏆</h2>
-                <p>Score: <b>${score} / ${quizData.length}</b></p>
-                <p>Percentage: <b>${percentage.toFixed(2)}%</b></p>
-                <button onclick="location.reload()" class="reload-btn">Try Again 🔄</button>
-            `;
-        }
+        loadQuiz();
     </script>
+
 </body>
 </html>
